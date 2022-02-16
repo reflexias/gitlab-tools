@@ -1,0 +1,76 @@
+##################################################################
+# Dynamic Job ID: 7d73d315-4a80-4425-b063-30be74365f99
+##################################################################
+
+# Variables
+variables:
+    DYNAMIC_JOB_ID: 7d73d315-4a80-4425-b063-30be74365f99
+    foo: bar
+
+# Stages
+stages:
+    - generate
+    - build
+    - deploy
+
+# Generate Jobs Here!
+generate:
+    stage: generate
+    image:
+        name: golang:latest
+    script:
+        - go run test.go
+    artifacts:
+        - output/build.yml
+        - output/compliance.yml
+        - output/deploy.yml
+
+# Trigger build
+Trigger build:
+    stage: build
+    variables:
+        PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+    trigger:
+        strategy: depend
+        include:
+            - artifact: build.yml
+              job: generate
+    inherit:
+        variables: true
+    rules:
+        - when: never
+          if: $SKIP_BUILD == 'true'
+        - when: never
+          if: $CI_COMMIT_TAG != null
+
+# Trigger compliance
+Trigger compliance:
+    stage: build
+    variables:
+        PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+    trigger:
+        strategy: depend
+        include:
+            - artifact: compliance.yml
+              job: generate
+    inherit:
+        variables: true
+
+# Trigger deploy
+Trigger deploy:
+    stage: deploy
+    variables:
+        PARENT_PIPELINE_ID: $CI_PIPELINE_ID
+    trigger:
+        strategy: depend
+        include:
+            - artifact: deploy.yml
+              job: generate
+    inherit:
+        variables: true
+    rules:
+        - when: never
+          if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+        - when: never
+          if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+
