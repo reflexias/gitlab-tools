@@ -81,7 +81,7 @@ func (this *Workflow) Render() (out string) {
 			"go run test.go",
 		},
 		Variables: map[string]any{},
-		Artifacts: artifacts,
+		Artifacts: &JobArtifacts{Paths: artifacts},
 	}
 
 	out += "# Generate Jobs Here!\n"
@@ -102,7 +102,7 @@ func (this *Workflow) Render() (out string) {
 				Strategy: "depend",
 				Include: []JobTriggerInclude{
 					{
-						Artifact: pipeline.Name + ".yml",
+						Artifact: "output/" + pipeline.Name + ".yml",
 						Job:      "generate",
 					},
 				},

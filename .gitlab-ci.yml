@@ -1,10 +1,10 @@
 ##################################################################
-# Dynamic Job ID: 7d73d315-4a80-4425-b063-30be74365f99
+# Dynamic Job ID: 35deacd8-40fd-4c3d-96bb-ed273121f6dc
 ##################################################################
 
 # Variables
 variables:
-    DYNAMIC_JOB_ID: 7d73d315-4a80-4425-b063-30be74365f99
+    DYNAMIC_JOB_ID: 35deacd8-40fd-4c3d-96bb-ed273121f6dc
     foo: bar
 
 # Stages
@@ -21,9 +21,10 @@ generate:
     script:
         - go run test.go
     artifacts:
-        - output/build.yml
-        - output/compliance.yml
-        - output/deploy.yml
+        paths:
+            - output/build.yml
+            - output/compliance.yml
+            - output/deploy.yml
 
 # Trigger build
 Trigger build:

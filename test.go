@@ -37,8 +37,8 @@ func main() {
 	// Create the build pipeline
 	buildPipeline := workflow.CreatePipeline("build")
 	buildPipeline.AddTriggerVariable("PARENT_PIPELINE_ID", "$CI_PIPELINE_ID")
-	buildPipeline.AddIfWhenRule("$SKIP_BUILD == 'true'", "never")
-	buildPipeline.AddIfWhenRule("$CI_COMMIT_TAG != null", "never")
+	// buildPipeline.AddIfWhenRule("$SKIP_BUILD == 'true'", "never")
+	// buildPipeline.AddIfWhenRule("$CI_COMMIT_TAG != null", "never")
 
 	buildStage := buildPipeline.Stage("build")
 
@@ -71,8 +71,8 @@ func main() {
 	// Create the deploy pipeline
 	deployPipeline := workflow.CreatePipeline("deploy")
 	deployPipeline.AddTriggerVariable("PARENT_PIPELINE_ID", "$CI_PIPELINE_ID")
-	deployPipeline.AddIfWhenRule("$CI_PIPELINE_SOURCE == 'merge_request_event'", "never")
-	deployPipeline.AddIfWhenRule("$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH", "never")
+	// deployPipeline.AddIfWhenRule("$CI_PIPELINE_SOURCE == 'merge_request_event'", "never")
+	// deployPipeline.AddIfWhenRule("$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH", "never")
 
 	for _, environment := range data.Environments {
 		log.Println("Adding deploy Stage for:", environment)
@@ -80,15 +80,17 @@ func main() {
 
 		planJob := deployStage.Job("Plan "+environment, "ubuntu:latest", "")
 		planJob.AddCommand("env")
+		planJob.SetEnvironment(environment, "prepare", "", "")
 
 		deployJob := deployStage.Job("Deploy "+environment, "ubuntu:latest", "")
 		deployJob.AddCommand("env")
 		deployJob.Need("Plan " + environment)
-		deployJob.SetEnvironment(environment, "deploy", "", "")
+		deployJob.SetEnvironment(environment, "start", "", "")
 
 		smokeJob := deployStage.Job("Smoke "+environment, "ubuntu:latest", "")
 		smokeJob.AddCommand("env")
 		smokeJob.Need("Deploy " + environment)
+		smokeJob.SetEnvironment(environment, "verify", "", "")
 	}
 
 	// Output the main pipeline

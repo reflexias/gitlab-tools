@@ -12,7 +12,7 @@ type (
 		Needs        []string           `yaml:",omitempty"`
 		Extends      []string           `yaml:",omitempty"`
 		Script       []string           `yaml:",omitempty"`
-		Artifacts    []string           `yaml:",omitempty"`
+		Artifacts    *JobArtifacts      `yaml:",omitempty"`
 		PullPolicy   *string            `json:"pull_policy,omitempty" yaml:"pull_policy,omitempty"`
 		When         string             `yaml:",omitempty"`
 		Trigger      JobTrigger         `yaml:",omitempty"`
@@ -20,6 +20,9 @@ type (
 		Cache        []JobCache         `yaml:",omitempty"`
 		Environment  JobEnvironment     `yaml:",omitempty"`
 		Rules        []JobRules         `yaml:",omitempty"`
+	}
+	JobArtifacts struct {
+		Paths []string `yaml:",omitempty"`
 	}
 	JobRules struct {
 		Exists       []string `yaml:",omitempty"`
@@ -75,8 +78,10 @@ func NewJob(name, image, entrypoint string) *Job {
 		Secrets:   map[string]Secret{},
 		Extends:   []string{},
 		Script:    []string{},
-		Artifacts: []string{},
-		Rules:     []JobRules{},
+		Artifacts: &JobArtifacts{
+			Paths: []string{},
+		},
+		Rules: []JobRules{},
 	}
 
 	if image != "" {
@@ -193,7 +198,7 @@ func (this *Job) AddChangesWhenRule(changes []string, when string) {
 }
 
 func (this *Job) AddArtifact(file string) {
-	this.Artifacts = append(this.Artifacts, file)
+	this.Artifacts.Paths = append(this.Artifacts.Paths, file)
 }
 
 func (this *Job) AddCache(key string, paths ...string) {
