@@ -4,10 +4,12 @@ import "github.com/google/uuid"
 
 type (
 	Workflow struct {
-		ID        string
-		Pipelines []*Pipeline
-		Default   PipelineDefault `yaml:",omitempty"`
-		Variables map[string]any  `yaml:",omitempty"`
+		ID               string
+		Pipelines        []*Pipeline
+		Default          PipelineDefault `yaml:",omitempty"`
+		Variables        map[string]any  `yaml:",omitempty"`
+		GenerateImage    string
+		GenerateCommands []string
 	}
 )
 
@@ -15,7 +17,19 @@ func NewWorkflow() *Workflow {
 	return &Workflow{
 		Pipelines: []*Pipeline{},
 		Variables: map[string]any{},
+		GenerateCommands: []string{
+			"go run test.go",
+		},
+		GenerateImage: "ubuntu:latest",
 	}
+}
+
+func (this *Workflow) SetGenerateImage(name string) {
+	this.GenerateImage = name
+}
+
+func (this *Workflow) SetGenerateCommands(commands []string) {
+	this.GenerateCommands = commands
 }
 
 func (this *Workflow) Tags(tags ...string) {
@@ -75,11 +89,9 @@ func (this *Workflow) Render() (out string) {
 	def := &Job{
 		Stage: "generate",
 		Image: JobImage{
-			Name: "golang:latest",
+			Name: this.GenerateImage,
 		},
-		Script: []string{
-			"go run test.go",
-		},
+		Script:    this.GenerateCommands,
 		Variables: map[string]any{},
 		Artifacts: &JobArtifacts{Paths: artifacts},
 	}
