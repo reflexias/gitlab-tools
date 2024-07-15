@@ -78,10 +78,7 @@ func NewJob(name, image, entrypoint string) *Job {
 		Secrets:   map[string]Secret{},
 		Extends:   []string{},
 		Script:    []string{},
-		Artifacts: &JobArtifacts{
-			Paths: []string{},
-		},
-		Rules: []JobRules{},
+		Rules:     []JobRules{},
 	}
 
 	if image != "" {
@@ -198,6 +195,12 @@ func (this *Job) AddChangesWhenRule(changes []string, when string) {
 }
 
 func (this *Job) AddArtifact(file string) {
+	if this.Artifacts == nil {
+		this.Artifacts = &JobArtifacts{
+			Paths: []string{},
+		}
+	}
+
 	this.Artifacts.Paths = append(this.Artifacts.Paths, file)
 }
 
