@@ -2,8 +2,8 @@ package pipeline
 
 import (
 	"log"
-	"sort"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,27 +16,45 @@ type (
 		TriggerVariables map[string]any     `yaml:",omitempty"`
 		Stages           []*Stage           `yaml:",omitempty"`
 		Default          PipelineDefault    `yaml:",omitempty"`
+		Rules            []*JobRules        `yaml:",omitempty"`
 		triggerStage     string
-		Rules            []JobRules `yaml:",omitempty"`
 	}
 	PipelineIncludes struct {
-		Repo string `yaml:",omitempty"`
-		Ref  string `yaml:",omitempty"`
-		File string `yaml:",omitempty"`
+		Repo     string `yaml:",omitempty"`
+		Ref      string `yaml:",omitempty"`
+		File     string `yaml:",omitempty"`
+		Local    string `yaml:"local,omitempty"`
+		Project  string `yaml:"project,omitempty"`
+		Remote   string `yaml:"remote,omitempty"`
+		Template string `yaml:"template,omitempty"`
 	}
 	PipelineDefault struct {
-		Tags []string `yaml:",omitempty"`
+		AfterScript   []string  `yaml:"after_script,omitempty"`
+		BeforeScript  []string  `yaml:"before_script,omitempty"`
+		Image         string    `yaml:"image,omitempty"`
+		Interruptible bool      `yaml:"interruptible,omitempty"`
+		Retry         int       `yaml:"retry,omitempty"`
+		Services      []Service `yaml:"services,omitempty"`
+		Tags          []string  `yaml:"tags,omitempty"`
+		Timeout       string    `yaml:"timeout,omitempty"`
+	}
+	Service struct {
+		Name       string   `yaml:"name"`
+		Alias      string   `yaml:"alias,omitempty"`
+		Entrypoint []string `yaml:"entrypoint,omitempty"`
+		Command    []string `yaml:"command,omitempty"`
 	}
 )
 
 func NewPipeline(name string) *Pipeline {
 	return &Pipeline{
+		id:               uuid.NewString(),
 		Name:             name,
 		Includes:         []PipelineIncludes{},
 		Variables:        map[string]any{},
 		TriggerVariables: map[string]any{},
 		Stages:           []*Stage{},
-		Rules:            []JobRules{},
+		Rules:            []*JobRules{},
 		triggerStage:     name,
 	}
 }
@@ -74,13 +92,14 @@ func (this *Pipeline) AddTriggerVariable(variable string, value any) {
 func (this *Pipeline) Stage(name string) *Stage {
 	stage := NewStage(name)
 	this.Stages = append(this.Stages, stage)
+	stage.pipeline = this
 
 	return stage
 }
 
 // BuildJob.AddRule("if ...", "always", false) // if, when, allow failure
 func (this *Pipeline) AddRule(condition, when string, allowFailure bool) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If:           &condition,
 		When:         &when,
 		AllowFailure: &allowFailure,
@@ -88,33 +107,33 @@ func (this *Pipeline) AddRule(condition, when string, allowFailure bool) {
 }
 
 func (this *Pipeline) AddIfWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If:   &condition,
 		When: &when,
 	})
 }
 
 func (this *Pipeline) AddIfRule(condition string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If: &condition,
 	})
 }
 
 func (this *Pipeline) AddWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		When: &when,
 	})
 }
 
 func (this *Pipeline) AddExistsWhenRule(exists []string, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		Exists: exists,
 		When:   &when,
 	})
 }
 
 func (this *Pipeline) AddChangesWhenRule(changes []string, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		Changes: changes,
 		When:    &when,
 	})
@@ -148,7 +167,7 @@ func (this *Pipeline) Render() (out string) {
 		out += "\n"
 	}
 	stages := []string{}
-	jobs := []*Job{}
+	jobsNames := map[string]bool{}
 
 	for _, stage := range this.Stages {
 		stages = append(stages, stage.Name)
@@ -156,7 +175,10 @@ func (this *Pipeline) Render() (out string) {
 		for _, job := range stage.Jobs {
 			job.Stage = stage.Name
 
-			jobs = append(jobs, job)
+			if _, ok := jobsNames[job.Name]; ok {
+				log.Fatal("Duplicate job name: " + job.Name)
+			}
+			jobsNames[job.Name] = true
 		}
 	}
 	out += "# Stages\n"
@@ -166,18 +188,13 @@ func (this *Pipeline) Render() (out string) {
 	out += "#################################\n"
 	out += "# Jobs\n"
 	for _, stage := range this.Stages {
+		log.Println("Rendering jobs for stage: " + stage.Name)
 		out += "# Stage: " + stage.Name + "\n"
 
-		keys := make([]string, 0, len(stage.Jobs))
-
-		for k := range stage.Jobs {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			job := stage.Jobs[k]
+		for _, job := range stage.Jobs {
 			job.Stage = stage.Name
+
+			log.Println("Rendering job: " + job.Name)
 
 			out += Marshal(job.Name, job)
 			out += "\n"

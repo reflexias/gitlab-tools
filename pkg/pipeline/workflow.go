@@ -88,12 +88,12 @@ func (this *Workflow) Render() (out string) {
 
 	def := &Job{
 		Stage: "generate",
-		Image: JobImage{
+		Image: &JobImage{
 			Name: this.GenerateImage,
 		},
 		Script:    this.GenerateCommands,
 		Variables: map[string]any{},
-		Artifacts: &JobArtifacts{Paths: artifacts},
+		Artifacts: &Artifacts{Paths: artifacts},
 	}
 
 	out += "# Generate Jobs Here!\n"
@@ -102,8 +102,6 @@ func (this *Workflow) Render() (out string) {
 
 	// Add Pipeline Jobs
 	for _, pipeline := range this.Pipelines {
-		jobID := uuid.NewString()
-		pipeline.id = jobID
 		def := &Job{
 			Stage: pipeline.triggerStage,
 			Inherit: JobInherit{

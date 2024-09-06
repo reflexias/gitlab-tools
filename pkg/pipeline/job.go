@@ -3,33 +3,42 @@ package pipeline
 type (
 	Job struct {
 		Stage        string
-		Name         string             `yaml:"-"`
-		Image        JobImage           `yaml:",omitempty"`
-		Variables    map[string]any     `yaml:",omitempty"`
-		Secrets      map[string]Secret  `yaml:",omitempty"`
-		IDTokens     map[string]IDToken `yaml:"id_tokens,omitempty"`
-		Dependencies []string           `yaml:",omitempty"`
-		Needs        []string           `yaml:",omitempty"`
-		Extends      []string           `yaml:",omitempty"`
-		Script       []string           `yaml:",omitempty"`
-		Artifacts    *JobArtifacts      `yaml:",omitempty"`
-		PullPolicy   *string            `json:"pull_policy,omitempty" yaml:"pull_policy,omitempty"`
-		When         string             `yaml:",omitempty"`
-		Trigger      JobTrigger         `yaml:",omitempty"`
-		Inherit      JobInherit         `yaml:",omitempty"`
-		Cache        []JobCache         `yaml:",omitempty"`
-		Environment  JobEnvironment     `yaml:",omitempty"`
-		Rules        []JobRules         `yaml:",omitempty"`
+		stage        *Stage
+		Name         string              `yaml:"-"`
+		Image        *JobImage           `yaml:",omitempty"`
+		Variables    map[string]any      `yaml:",omitempty"`
+		Secrets      map[string]*Secret  `yaml:",omitempty"`
+		IDTokens     map[string]*IDToken `yaml:"id_tokens,omitempty"`
+		Dependencies []string            `yaml:",omitempty"`
+		Needs        []string            `yaml:",omitempty"`
+		Extends      []string            `yaml:",omitempty"`
+		Script       []string            `yaml:",omitempty"`
+		Artifacts    *Artifacts          `yaml:",omitempty"`
+		PullPolicy   *string             `json:"pull_policy,omitempty" yaml:"pull_policy,omitempty"`
+		When         string              `yaml:",omitempty"`
+		Trigger      JobTrigger          `yaml:",omitempty"`
+		Inherit      JobInherit          `yaml:",omitempty"`
+		Cache        []*JobCache         `yaml:",omitempty"`
+		Environment  Environment         `yaml:",omitempty"`
+		Rules        []*JobRules         `yaml:",omitempty"`
+		BeforeScript []string            `yaml:"before_script,omitempty"`
+		AfterScript  []string            `yaml:"after_script,omitempty"`
+		AllowFailure bool                `yaml:"allow_failure,omitempty"`
+		Retry        int                 `yaml:"retry,omitempty"`
+		Services     []*Service          `yaml:"services,omitempty"`
+		Tags         []string            `yaml:"tags,omitempty"`
+		Timeout      string              `yaml:"timeout,omitempty"`
 	}
-	JobArtifacts struct {
+	Artifacts struct {
 		Paths []string `yaml:",omitempty"`
 	}
 	JobRules struct {
-		Exists       []string `yaml:",omitempty"`
-		Changes      []string `yaml:",omitempty"`
-		When         *string  `yaml:",omitempty"`
-		If           *string  `yaml:",omitempty"`
-		AllowFailure *bool    `yaml:"allow_failure,omitempty"`
+		Exists       []string          `yaml:",omitempty"`
+		Changes      []string          `yaml:",omitempty"`
+		When         *string           `yaml:",omitempty"`
+		Variables    map[string]string `yaml:"variables,omitempty"`
+		If           *string           `yaml:",omitempty"`
+		AllowFailure *bool             `yaml:"allow_failure,omitempty"`
 	}
 	JobImage struct {
 		Name       string `yaml:",omitempty"`
@@ -52,6 +61,9 @@ type (
 		Paths []string `yaml:",omitempty"`
 	}
 	Secret struct {
+		Vault VaultSecret `yaml:",omitempty"`
+	}
+	VaultSecret struct {
 		Engine SecretEngine `yaml:",omitempty"`
 		Path   string       `yaml:",omitempty"`
 		Field  string       `yaml:",omitempty"`
@@ -61,9 +73,9 @@ type (
 		Name string `yaml:",omitempty"`
 	}
 	IDToken struct {
-		Aud string `yaml:",omitempty"`
+		Aud []string `yaml:",omitempty"`
 	}
-	JobEnvironment struct {
+	Environment struct {
 		Name   string `yaml:",omitempty"`
 		Url    string `yaml:",omitempty"`
 		Action string `yaml:",omitempty"`
@@ -75,14 +87,14 @@ func NewJob(name, image, entrypoint string) *Job {
 	job := &Job{
 		Name:      name,
 		Variables: map[string]any{},
-		Secrets:   map[string]Secret{},
+		Secrets:   map[string]*Secret{},
 		Extends:   []string{},
 		Script:    []string{},
-		Rules:     []JobRules{},
+		Rules:     []*JobRules{},
 	}
 
 	if image != "" {
-		job.Image = JobImage{
+		job.Image = &JobImage{
 			Name:       image,
 			Entrypoint: entrypoint,
 		}
@@ -120,22 +132,24 @@ func (this *Job) AddCommand(command string) {
 // Add a Vault Secret CICD Variable, engine, engine-path, secret path, field
 // https://docs.gitlab.com/ee/ci/yaml/#secretsvault
 func (this *Job) AddVaultSecret(Variable, engine, enginePath, secretPath, field string) {
-	this.Secrets[Variable] = Secret{
-		Engine: SecretEngine{
-			Name: engine,
-			Path: enginePath,
+	this.Secrets[Variable] = &Secret{
+		Vault: VaultSecret{
+			Engine: SecretEngine{
+				Name: engine,
+				Path: enginePath,
+			},
+			Path:  secretPath,
+			Field: field,
 		},
-		Path:  secretPath,
-		Field: field,
 	}
 }
 
 func (this *Job) AddIDToken(name, aud string) {
 	if this.IDTokens == nil {
-		this.IDTokens = map[string]IDToken{}
+		this.IDTokens = map[string]*IDToken{}
 	}
-	this.IDTokens[name] = IDToken{
-		Aud: aud,
+	this.IDTokens[name] = &IDToken{
+		Aud: []string{aud},
 	}
 }
 
@@ -144,7 +158,7 @@ func (this *Job) SetWhen(when string) {
 }
 
 func (this *Job) SetEnvironment(name, action, url, tier string) {
-	this.Environment = JobEnvironment{
+	this.Environment = Environment{
 		Name:   name,
 		Action: action,
 		Url:    url,
@@ -154,7 +168,7 @@ func (this *Job) SetEnvironment(name, action, url, tier string) {
 
 // BuildJob.AddRule("if ...", "always", false) // if, when, allow failure
 func (this *Job) AddRule(condition, when string, allowFailure bool) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If:           &condition,
 		When:         &when,
 		AllowFailure: &allowFailure,
@@ -162,33 +176,33 @@ func (this *Job) AddRule(condition, when string, allowFailure bool) {
 }
 
 func (this *Job) AddIfWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If:   &condition,
 		When: &when,
 	})
 }
 
 func (this *Job) AddIfRule(condition string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		If: &condition,
 	})
 }
 
 func (this *Job) AddWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		When: &when,
 	})
 }
 
 func (this *Job) AddExistsWhenRule(exists []string, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		Exists: exists,
 		When:   &when,
 	})
 }
 
 func (this *Job) AddChangesWhenRule(changes []string, when string) {
-	this.Rules = append(this.Rules, JobRules{
+	this.Rules = append(this.Rules, &JobRules{
 		Changes: changes,
 		When:    &when,
 	})
@@ -196,7 +210,7 @@ func (this *Job) AddChangesWhenRule(changes []string, when string) {
 
 func (this *Job) AddArtifact(file string) {
 	if this.Artifacts == nil {
-		this.Artifacts = &JobArtifacts{
+		this.Artifacts = &Artifacts{
 			Paths: []string{},
 		}
 	}
@@ -206,7 +220,7 @@ func (this *Job) AddArtifact(file string) {
 
 func (this *Job) AddCache(key string, paths ...string) {
 	if len(paths) > 0 {
-		this.Cache = append(this.Cache, JobCache{
+		this.Cache = append(this.Cache, &JobCache{
 			Key:   key,
 			Paths: paths,
 		})

@@ -85,22 +85,19 @@ func main() {
 		deployJob := deployStage.Job("Deploy "+environment, "ubuntu:latest", "")
 		deployJob.AddCommand("env")
 		deployJob.Need("Plan " + environment)
+		deployJob.NeedsJob(planJob)
 		deployJob.SetEnvironment(environment, "start", "", "")
+		deployJob.AddVaultSecret("DB_PASSWORD", "kv-v2", "ops", environment+"/db", "password")
 
 		smokeJob := deployStage.Job("Smoke "+environment, "ubuntu:latest", "")
 		smokeJob.AddCommand("env")
-		smokeJob.Need("Deploy " + environment)
+		smokeJob.NeedsJob(deployJob)
 		smokeJob.SetEnvironment(environment, "verify", "", "")
 	}
 
 	// Output the main pipeline
 	log.Println("Writing: pipeline.yml")
-	err = os.WriteFile("output/pipeline.yml", []byte(workflow.Render()), 0660)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = os.WriteFile(".gitlab-ci.yml", []byte(workflow.Render()), 0660)
+	err = os.WriteFile("output/.gitlab-ci.yml", []byte(workflow.Render()), 0660)
 	if err != nil {
 		log.Fatal(err)
 	}
