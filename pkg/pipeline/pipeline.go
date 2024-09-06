@@ -151,11 +151,9 @@ func (this *Pipeline) Render() (out string) {
 	out += "#################################\n"
 	out += "\n"
 
-	if len(this.Default.Tags) > 0 {
-		out += "# Default\n"
-		out += Marshal("default", this.Default)
-		out += "\n"
-	}
+	out += "# Default\n"
+	out += Marshal("default", this.Default)
+	out += "\n"
 
 	if len(this.Includes) > 0 {
 		out += "# Includes\n"
