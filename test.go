@@ -86,7 +86,6 @@ func main() {
 		deployJob := deployStage.Job("Deploy %s", environment)
 		deployJob.SetImage("ubuntu:latest")
 		deployJob.AddCommand("env")
-		deployJob.Need("Plan " + environment)
 		deployJob.NeedsJob(planJob)
 		deployJob.SetEnvironment(environment, "start", "", "")
 		deployJob.AddVaultSecret("DB_PASSWORD", "kv-v2", "ops", environment+"/db", "password")
