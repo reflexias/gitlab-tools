@@ -20,7 +20,7 @@ type (
 		Inherit      JobInherit          `yaml:",omitempty"`
 		Cache        []*JobCache         `yaml:",omitempty"`
 		Environment  Environment         `yaml:",omitempty"`
-		Rules        []*JobRules         `yaml:",omitempty"`
+		Rules        []*JobRule          `yaml:",omitempty"`
 		BeforeScript []string            `yaml:"before_script,omitempty"`
 		AfterScript  []string            `yaml:"after_script,omitempty"`
 		AllowFailure bool                `yaml:"allow_failure,omitempty"`
@@ -32,7 +32,7 @@ type (
 	Artifacts struct {
 		Paths []string `yaml:",omitempty"`
 	}
-	JobRules struct {
+	JobRule struct {
 		Exists       []string          `yaml:",omitempty"`
 		Changes      []string          `yaml:",omitempty"`
 		When         *string           `yaml:",omitempty"`
@@ -83,27 +83,35 @@ type (
 	}
 )
 
-func NewJob(name, image, entrypoint string) *Job {
+func NewJob(name string) *Job {
 	job := &Job{
 		Name:      name,
 		Variables: map[string]any{},
 		Secrets:   map[string]*Secret{},
 		Extends:   []string{},
 		Script:    []string{},
-		Rules:     []*JobRules{},
+		Rules:     []*JobRule{},
 	}
 
-	if image != "" {
-		job.Image = &JobImage{
-			Name:       image,
-			Entrypoint: entrypoint,
-		}
-	}
 	return job
 }
 
 func (this *Job) Extend(name string) {
 	this.Extends = append(this.Extends, name)
+}
+
+func (this *Job) SetImage(name string) {
+	if this.Image == nil {
+		this.Image = &JobImage{}
+	}
+	this.Image.Name = name
+}
+
+func (this *Job) SetEntrypoint(entrypoint string) {
+	if this.Image == nil {
+		this.Image = &JobImage{}
+	}
+	this.Image.Entrypoint = entrypoint
 }
 
 func (this *Job) Need(name string) {
@@ -168,7 +176,7 @@ func (this *Job) SetEnvironment(name, action, url, tier string) {
 
 // BuildJob.AddRule("if ...", "always", false) // if, when, allow failure
 func (this *Job) AddRule(condition, when string, allowFailure bool) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If:           &condition,
 		When:         &when,
 		AllowFailure: &allowFailure,
@@ -176,33 +184,33 @@ func (this *Job) AddRule(condition, when string, allowFailure bool) {
 }
 
 func (this *Job) AddIfWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If:   &condition,
 		When: &when,
 	})
 }
 
 func (this *Job) AddIfRule(condition string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If: &condition,
 	})
 }
 
 func (this *Job) AddWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		When: &when,
 	})
 }
 
 func (this *Job) AddExistsWhenRule(exists []string, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		Exists: exists,
 		When:   &when,
 	})
 }
 
 func (this *Job) AddChangesWhenRule(changes []string, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		Changes: changes,
 		When:    &when,
 	})

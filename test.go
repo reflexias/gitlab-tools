@@ -44,14 +44,14 @@ func main() {
 
 	for _, thing := range data.Things {
 		log.Println("Adding build job for:", thing)
-		buildJob := buildStage.Job("Build "+thing, "ubuntu:latest", "")
+		buildJob := buildStage.Job("Build " + thing)
 		buildJob.AddCommand("env")
 
-		publishJob := buildStage.Job("Publish "+thing, "ubuntu:latest", "")
+		publishJob := buildStage.Job("Publish " + thing)
 		publishJob.AddCommand("env")
 		publishJob.DependsOnJob(buildJob)
 
-		releaseJob := buildStage.Job("Release "+thing, "ubuntu:latest", "")
+		releaseJob := buildStage.Job("Release " + thing)
 		releaseJob.AddCommand("env")
 		releaseJob.DependsOnJob(publishJob)
 	}
@@ -62,10 +62,10 @@ func main() {
 	compliancePipeline.SetTriggerStage("build")
 	complianceStage := compliancePipeline.Stage("compliance")
 
-	unitTest := complianceStage.Job("Run Unit Test", "ubuntu:latest", "")
+	unitTest := complianceStage.Job("Run Unit Test")
 	unitTest.AddCommand("env")
 
-	codeCoverage := complianceStage.Job("Run Code Coverage", "ubuntu:latest", "")
+	codeCoverage := complianceStage.Job("Run Code Coverage")
 	codeCoverage.AddCommand("env")
 
 	// Create the deploy pipeline
@@ -76,20 +76,23 @@ func main() {
 
 	for _, environment := range data.Environments {
 		log.Println("Adding deploy Stage for:", environment)
-		deployStage := deployPipeline.Stage("deploy-" + environment)
+		deployStage := deployPipeline.Stage("deploy-%s", environment)
 
-		planJob := deployStage.Job("Plan "+environment, "ubuntu:latest", "")
+		planJob := deployStage.Job("Plan %s", environment)
+		planJob.SetImage("ubuntu:latest")
 		planJob.AddCommand("env")
 		planJob.SetEnvironment(environment, "prepare", "", "")
 
-		deployJob := deployStage.Job("Deploy "+environment, "ubuntu:latest", "")
+		deployJob := deployStage.Job("Deploy %s", environment)
+		deployJob.SetImage("ubuntu:latest")
 		deployJob.AddCommand("env")
 		deployJob.Need("Plan " + environment)
 		deployJob.NeedsJob(planJob)
 		deployJob.SetEnvironment(environment, "start", "", "")
 		deployJob.AddVaultSecret("DB_PASSWORD", "kv-v2", "ops", environment+"/db", "password")
 
-		smokeJob := deployStage.Job("Smoke "+environment, "ubuntu:latest", "")
+		smokeJob := deployStage.Job("Smoke %s", environment)
+		smokeJob.SetImage("ubuntu:latest")
 		smokeJob.AddCommand("env")
 		smokeJob.NeedsJob(deployJob)
 		smokeJob.SetEnvironment(environment, "verify", "", "")

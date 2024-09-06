@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ type (
 		TriggerVariables map[string]any     `yaml:",omitempty"`
 		Stages           []*Stage           `yaml:",omitempty"`
 		Default          PipelineDefault    `yaml:",omitempty"`
-		Rules            []*JobRules        `yaml:",omitempty"`
+		Rules            []*JobRule         `yaml:",omitempty"`
 		triggerStage     string
 	}
 	PipelineIncludes struct {
@@ -54,7 +55,7 @@ func NewPipeline(name string) *Pipeline {
 		Variables:        map[string]any{},
 		TriggerVariables: map[string]any{},
 		Stages:           []*Stage{},
-		Rules:            []*JobRules{},
+		Rules:            []*JobRule{},
 		triggerStage:     name,
 	}
 }
@@ -89,7 +90,8 @@ func (this *Pipeline) AddTriggerVariable(variable string, value any) {
 }
 
 // Build = Pipeline.CreateStage("Build")
-func (this *Pipeline) Stage(name string) *Stage {
+func (this *Pipeline) Stage(format string, a ...any) *Stage {
+	name := fmt.Sprintf(format, a...)
 	stage := NewStage(name)
 	this.Stages = append(this.Stages, stage)
 	stage.pipeline = this
@@ -99,7 +101,7 @@ func (this *Pipeline) Stage(name string) *Stage {
 
 // BuildJob.AddRule("if ...", "always", false) // if, when, allow failure
 func (this *Pipeline) AddRule(condition, when string, allowFailure bool) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If:           &condition,
 		When:         &when,
 		AllowFailure: &allowFailure,
@@ -107,33 +109,33 @@ func (this *Pipeline) AddRule(condition, when string, allowFailure bool) {
 }
 
 func (this *Pipeline) AddIfWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If:   &condition,
 		When: &when,
 	})
 }
 
 func (this *Pipeline) AddIfRule(condition string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		If: &condition,
 	})
 }
 
 func (this *Pipeline) AddWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		When: &when,
 	})
 }
 
 func (this *Pipeline) AddExistsWhenRule(exists []string, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		Exists: exists,
 		When:   &when,
 	})
 }
 
 func (this *Pipeline) AddChangesWhenRule(changes []string, when string) {
-	this.Rules = append(this.Rules, &JobRules{
+	this.Rules = append(this.Rules, &JobRule{
 		Changes: changes,
 		When:    &when,
 	})
