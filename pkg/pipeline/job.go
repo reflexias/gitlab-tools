@@ -37,7 +37,7 @@ type (
 	JobRule struct {
 		Exists       []string          `yaml:",omitempty"`
 		Changes      []string          `yaml:",omitempty"`
-		When         *string           `yaml:",omitempty"`
+		When         string            `yaml:",omitempty"`
 		Variables    map[string]string `yaml:"variables,omitempty"`
 		If           *string           `yaml:",omitempty"`
 		AllowFailure *bool             `yaml:"allow_failure,omitempty"`
