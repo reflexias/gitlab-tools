@@ -37,7 +37,7 @@ type (
 	JobRule struct {
 		Exists       []string          `yaml:",omitempty"`
 		Changes      []string          `yaml:",omitempty"`
-		When         string            `yaml:",omitempty"`
+		When         *string           `yaml:",omitempty"`
 		Variables    map[string]string `yaml:"variables,omitempty"`
 		If           *string           `yaml:",omitempty"`
 		AllowFailure *bool             `yaml:"allow_failure,omitempty"`
@@ -209,10 +209,10 @@ func (this *Job) AddWhenRule(condition, when string) {
 	})
 }
 
-func (this *Job) AddExistsWhenRule(exists []string, when string) {
+func (this *Job) AddExistsWhenRule(exists []string, when *string) {
 	this.Rules = append(this.Rules, &JobRule{
 		Exists: exists,
-		When:   &when,
+		When:   when,
 	})
 }
 
