@@ -10,7 +10,8 @@ type (
 	}
 )
 
-func NewStage(name string) *Stage {
+func NewStage(format string, a ...any) *Stage {
+	name := fmt.Sprintf(format, a...)
 	return &Stage{
 		Name: name,
 		Jobs: []*Job{},

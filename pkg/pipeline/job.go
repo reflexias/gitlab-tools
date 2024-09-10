@@ -85,7 +85,8 @@ type (
 	}
 )
 
-func NewJob(name string) *Job {
+func NewJob(format string, a ...any) *Job {
+	name := fmt.Sprintf(format, a...)
 	job := &Job{
 		Name:      name,
 		Variables: map[string]any{},
@@ -103,7 +104,8 @@ func (this *Job) Extend(format string, a ...any) {
 	this.Extends = append(this.Extends, name)
 }
 
-func (this *Job) SetImage(name string) {
+func (this *Job) SetImage(format string, a ...any) {
+	name := fmt.Sprintf(format, a...)
 	if this.Image == nil {
 		this.Image = &JobImage{}
 	}
@@ -117,7 +119,8 @@ func (this *Job) SetEntrypoint(entrypoint string) {
 	this.Image.Entrypoint = entrypoint
 }
 
-func (this *Job) Need(name string) {
+func (this *Job) Need(format string, a ...any) {
+	name := fmt.Sprintf(format, a...)
 	this.Needs = append(this.Needs, name)
 }
 
@@ -125,7 +128,8 @@ func (this *Job) NeedsJob(j *Job) {
 	this.Needs = append(this.Needs, j.Name)
 }
 
-func (this *Job) Dependency(name string) {
+func (this *Job) Dependency(format string, a ...any) {
+	name := fmt.Sprintf(format, a...)
 	this.Dependencies = append(this.Dependencies, name)
 }
 func (this *Job) DependsOnJob(j *Job) {
@@ -219,7 +223,8 @@ func (this *Job) AddChangesWhenRule(changes []string, when string) {
 	})
 }
 
-func (this *Job) AddArtifact(file string) {
+func (this *Job) AddArtifact(format string, a ...any) {
+	file := fmt.Sprintf(format, a...)
 	if this.Artifacts == nil {
 		this.Artifacts = &Artifacts{
 			Paths: []string{},
