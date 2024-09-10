@@ -1,5 +1,7 @@
 package pipeline
 
+import "fmt"
+
 type (
 	Job struct {
 		Stage        string
@@ -96,7 +98,8 @@ func NewJob(name string) *Job {
 	return job
 }
 
-func (this *Job) Extend(name string) {
+func (this *Job) Extend(format string, a ...any) {
+	name := fmt.Sprintf(format, a...)
 	this.Extends = append(this.Extends, name)
 }
 
