@@ -11,14 +11,20 @@ import (
 type (
 	Pipeline struct {
 		id               string
-		Name             string             `yaml:",omitempty"`
-		Includes         []PipelineIncludes `yaml:",omitempty"`
-		Variables        map[string]any     `yaml:",omitempty"`
-		TriggerVariables map[string]any     `yaml:",omitempty"`
-		Stages           []*Stage           `yaml:",omitempty"`
-		Default          PipelineDefault    `yaml:",omitempty"`
-		Rules            []*JobRule         `yaml:",omitempty"`
+		Name             string                       `yaml:",omitempty"`
+		Includes         []PipelineIncludes           `yaml:",omitempty"`
+		Variables        map[string]*PipelineVariable `yaml:",omitempty"`
+		TriggerVariables map[string]any               `yaml:",omitempty"`
+		Stages           []*Stage                     `yaml:",omitempty"`
+		Default          PipelineDefault              `yaml:",omitempty"`
+		Cache            []*JobCache                  `yaml:",omitempty"`
+		Rules            []*JobRule                   `yaml:",omitempty"`
 		triggerStage     string
+	}
+	PipelineVariable struct {
+		Value       string
+		Description string
+		Options     []string
 	}
 	PipelineIncludes struct {
 		Repo     string `yaml:",omitempty"`
@@ -30,14 +36,18 @@ type (
 		Template string `yaml:"template,omitempty"`
 	}
 	PipelineDefault struct {
-		AfterScript   []string  `yaml:"after_script,omitempty"`
-		BeforeScript  []string  `yaml:"before_script,omitempty"`
-		Image         string    `yaml:"image,omitempty"`
-		Interruptible bool      `yaml:"interruptible,omitempty"`
-		Retry         int       `yaml:"retry,omitempty"`
-		Services      []Service `yaml:"services,omitempty"`
-		Tags          []string  `yaml:"tags,omitempty"`
-		Timeout       string    `yaml:"timeout,omitempty"`
+		AfterScript   []string              `yaml:"after_script,omitempty"`
+		BeforeScript  []string              `yaml:"before_script,omitempty"`
+		Image         string                `yaml:"image,omitempty"`
+		Interruptible bool                  `yaml:"interruptible,omitempty"`
+		Retry         *PipelineDefaultRetry `yaml:"retry,omitempty"`
+		Services      []Service             `yaml:"services,omitempty"`
+		Tags          []string              `yaml:"tags,omitempty"`
+		Timeout       string                `yaml:"timeout,omitempty"`
+	}
+	PipelineDefaultRetry struct {
+		Max  int      `yaml:"max,omitempty"`
+		When []string `yaml:"when,omitempty"`
 	}
 	Service struct {
 		Name       string   `yaml:"name"`
@@ -52,10 +62,11 @@ func NewPipeline(name string) *Pipeline {
 		id:               uuid.NewString(),
 		Name:             name,
 		Includes:         []PipelineIncludes{},
-		Variables:        map[string]any{},
+		Variables:        map[string]*PipelineVariable{},
 		TriggerVariables: map[string]any{},
 		Stages:           []*Stage{},
 		Rules:            []*JobRule{},
+		Cache:            []*JobCache{},
 		triggerStage:     name,
 	}
 }
@@ -81,8 +92,12 @@ func (this *Pipeline) Include(repo, ref, file string) {
 }
 
 // Pipeline.AddVariable("project", Project)
-func (this *Pipeline) AddVariable(variable string, value any) {
-	this.Variables[variable] = value
+func (this *Pipeline) AddVariable(variable string, value string, description string, options ...string) {
+	this.Variables[variable] = &PipelineVariable{
+		Value:       value,
+		Description: description,
+		Options:     options,
+	}
 }
 
 func (this *Pipeline) AddTriggerVariable(variable string, value any) {
@@ -145,6 +160,33 @@ func (this *Pipeline) Tags(tags ...string) {
 	this.Default.Tags = append(this.Default.Tags, tags...)
 }
 
+func (this *Pipeline) RetryWhen(items ...string) {
+	if this.Default.Retry == nil {
+		this.Default.Retry = &PipelineDefaultRetry{}
+	}
+	if this.Default.Retry.When == nil {
+		this.Default.Retry.When = []string{}
+	}
+
+	this.Default.Retry.When = append(this.Default.Retry.When, items...)
+}
+
+func (this *Pipeline) RetryMax(count int) {
+	if this.Default.Retry == nil {
+		this.Default.Retry = &PipelineDefaultRetry{}
+	}
+	this.Default.Retry.Max = count
+}
+
+func (this *Pipeline) AddCache(key string, paths ...string) {
+	if len(paths) > 0 {
+		this.Cache = append(this.Cache, &JobCache{
+			Key:   key,
+			Paths: paths,
+		})
+	}
+}
+
 func (this *Pipeline) Render() (out string) {
 	out += "#################################\n"
 	out += "# " + this.Name + " (" + this.id + ")\n"
@@ -154,6 +196,12 @@ func (this *Pipeline) Render() (out string) {
 	out += "# Default\n"
 	out += Marshal("default", this.Default)
 	out += "\n"
+
+	if len(this.Cache) > 0 {
+		out += "# Cache\n"
+		out += Marshal("cache", this.Cache)
+		out += "\n"
+	}
 
 	if len(this.Includes) > 0 {
 		out += "# Includes\n"
