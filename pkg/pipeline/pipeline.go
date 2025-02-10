@@ -27,7 +27,7 @@ type (
 		Options     []string
 	}
 	PipelineIncludes struct {
-		Repo     string `yaml:",omitempty"`
+		// Repo     string `yaml:",omitempty"`
 		Ref      string `yaml:",omitempty"`
 		File     string `yaml:",omitempty"`
 		Local    string `yaml:"local,omitempty"`
@@ -83,11 +83,11 @@ func (this *Pipeline) SetTriggerStage(name string) {
 	this.triggerStage = name
 }
 
-func (this *Pipeline) Include(repo, ref, file string) {
+func (this *Pipeline) Include(project, ref, file string) {
 	this.Includes = append(this.Includes, PipelineIncludes{
-		Repo: repo,
-		Ref:  ref,
-		File: file,
+		Project: project,
+		Ref:     ref,
+		File:    file,
 	})
 }
 
