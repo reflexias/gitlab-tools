@@ -48,6 +48,8 @@ type (
 	}
 	JobTrigger struct {
 		Strategy string              `yaml:",omitempty"`
+		Project  string              `yaml:",omitempty"`
+		Branch   string              `yaml:",omitempty"`
 		Include  []JobTriggerInclude `yaml:",omitempty"`
 	}
 	JobTriggerInclude struct {
