@@ -18,8 +18,11 @@ type (
 		Stages           []*Stage                     `yaml:",omitempty"`
 		Default          PipelineDefault              `yaml:",omitempty"`
 		Cache            []*JobCache                  `yaml:",omitempty"`
-		Rules            []*JobRule                   `yaml:",omitempty"`
+		Workflow         PipelineWorkflow             `yaml:",omitempty"`
 		triggerStage     string
+	}
+	PipelineWorkflow struct {
+		Rules []*JobRule `yaml:",omitempty"`
 	}
 	PipelineVariable struct {
 		Value       string
@@ -65,7 +68,6 @@ func NewPipeline(name string) *Pipeline {
 		Variables:        map[string]*PipelineVariable{},
 		TriggerVariables: map[string]any{},
 		Stages:           []*Stage{},
-		Rules:            []*JobRule{},
 		Cache:            []*JobCache{},
 		triggerStage:     name,
 	}
@@ -114,45 +116,31 @@ func (this *Pipeline) Stage(format string, a ...any) *Stage {
 	return stage
 }
 
-// BuildJob.AddRule("if ...", "always", false) // if, when, allow failure
-func (this *Pipeline) AddRule(condition, when string, allowFailure bool) {
-	this.Rules = append(this.Rules, &JobRule{
-		If:           &condition,
-		When:         &when,
-		AllowFailure: &allowFailure,
+func (this *Pipeline) AddIfRule(condition string) {
+	if this.Workflow.Rules == nil {
+		this.Workflow.Rules = []*JobRule{}
+	}
+	this.Workflow.Rules = append(this.Workflow.Rules, &JobRule{
+		If: &condition,
 	})
 }
 
 func (this *Pipeline) AddIfWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRule{
+	if this.Workflow.Rules == nil {
+		this.Workflow.Rules = []*JobRule{}
+	}
+	this.Workflow.Rules = append(this.Workflow.Rules, &JobRule{
 		If:   &condition,
 		When: &when,
 	})
 }
 
-func (this *Pipeline) AddIfRule(condition string) {
-	this.Rules = append(this.Rules, &JobRule{
-		If: &condition,
-	})
-}
-
-func (this *Pipeline) AddWhenRule(condition, when string) {
-	this.Rules = append(this.Rules, &JobRule{
+func (this *Pipeline) AddWhenRule(when string) {
+	if this.Workflow.Rules == nil {
+		this.Workflow.Rules = []*JobRule{}
+	}
+	this.Workflow.Rules = append(this.Workflow.Rules, &JobRule{
 		When: &when,
-	})
-}
-
-func (this *Pipeline) AddExistsWhenRule(exists []string, when string) {
-	this.Rules = append(this.Rules, &JobRule{
-		Exists: exists,
-		When:   &when,
-	})
-}
-
-func (this *Pipeline) AddChangesWhenRule(changes []string, when string) {
-	this.Rules = append(this.Rules, &JobRule{
-		Changes: changes,
-		When:    &when,
 	})
 }
 
@@ -195,6 +183,10 @@ func (this *Pipeline) Render() (out string) {
 
 	out += "# Default\n"
 	out += Marshal("default", this.Default)
+	out += "\n"
+
+	out += "# Workflow\n"
+	out += Marshal("workflow", this.Workflow)
 	out += "\n"
 
 	if len(this.Cache) > 0 {

@@ -117,7 +117,6 @@ func (this *Workflow) Render() (out string) {
 					},
 				},
 			},
-			Rules: pipeline.Rules,
 		}
 
 		name := "Trigger " + pipeline.Name
