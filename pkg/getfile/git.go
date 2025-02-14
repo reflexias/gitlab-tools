@@ -30,7 +30,7 @@ func GitFile(server, token, repo, file, ref string) ([]byte, error) {
 		ref = project.DefaultBranch
 	}
 
-	log.Printf("retreiving file %s from %s:%s...\n", file, repo, ref)
+	log.Debugf("retreiving file %s from %s:%s...\n", file, repo, ref)
 	gf := &gitlab.GetFileOptions{
 		Ref: gitlab.String(ref),
 	}
