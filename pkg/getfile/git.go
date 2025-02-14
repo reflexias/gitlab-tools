@@ -3,8 +3,6 @@ package getfile
 import (
 	"encoding/base64"
 
-	"log"
-
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -18,17 +16,17 @@ func GitFile(server, token, repo, file, ref string) ([]byte, error) {
 	}
 	git, err := gitlab.NewClient(token, clientOpts...)
 	if err != nil {
-		log.Println(err)
+		log.Info(err)
 		return nil, err
 	}
 
 	if ref == "" {
-		log.Println("Ref is empty, getting project settings for ", repo)
+		log.Info("Ref is empty, getting project settings for ", repo)
 		project, _, err := git.Projects.GetProject(repo, &gitlab.GetProjectOptions{})
 		if err != nil {
 			return nil, err
 		}
-		log.Println("Setting Ref to: ", project.DefaultBranch, " for: ", file)
+		log.Info("Setting Ref to: ", project.DefaultBranch, " for: ", file)
 		ref = project.DefaultBranch
 	}
 
