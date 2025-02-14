@@ -227,13 +227,13 @@ func (this *Pipeline) Render() (out string) {
 	out += "#################################\n"
 	out += "# Jobs\n"
 	for _, stage := range this.Stages {
-		log.Info("Rendering jobs for stage: " + stage.Name)
+		log.Debug("Rendering jobs for stage: " + stage.Name)
 		out += "# Stage: " + stage.Name + "\n"
 
 		for _, job := range stage.Jobs {
 			job.Stage = stage.Name
 
-			log.Info("Rendering job: " + job.Name)
+			log.Debug("Rendering job: " + job.Name)
 
 			out += Marshal(job.Name, job)
 			out += "\n"

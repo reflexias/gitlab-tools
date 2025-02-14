@@ -16,17 +16,17 @@ func GitFile(server, token, repo, file, ref string) ([]byte, error) {
 	}
 	git, err := gitlab.NewClient(token, clientOpts...)
 	if err != nil {
-		log.Info(err)
+		log.Error(err)
 		return nil, err
 	}
 
 	if ref == "" {
-		log.Info("Ref is empty, getting project settings for ", repo)
+		log.Debug("Ref is empty, getting project settings for ", repo)
 		project, _, err := git.Projects.GetProject(repo, &gitlab.GetProjectOptions{})
 		if err != nil {
 			return nil, err
 		}
-		log.Info("Setting Ref to: ", project.DefaultBranch, " for: ", file)
+		log.Debug("Setting Ref to: ", project.DefaultBranch, " for: ", file)
 		ref = project.DefaultBranch
 	}
 
